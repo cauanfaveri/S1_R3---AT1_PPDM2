@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Pokedex Mobile",
+    "slug": "s2-r1-api-pokedex",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.senai.pokedexmobile"
+    },
+    "ios": {
+      "supportsTablet": true
+    }
+  }
+}
