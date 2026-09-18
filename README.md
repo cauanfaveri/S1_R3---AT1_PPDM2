@@ -1,68 +1,107 @@
-# Pokédex Mobile — Aplicação Mobile com Consumo de API
+# PokéMatch
 
-Atividade prática: aplicativo em **React Native + Expo (TypeScript)** que consome a API pública **PokéAPI** (https://pokeapi.co) e exibe os dados em três telas com navegação em pilha.
+PokéMatch é uma experiência de descoberta de Pokémon inspirada em aplicativos de match. Em vez de navegar por uma lista tradicional, a pessoa usuária avalia um Pokémon por vez: arrasta o card para a direita para curtir ou para a esquerda para passar.
 
-## Estrutura do projeto
+O aplicativo foi desenvolvido com React Native, Expo e TypeScript, consumindo dados públicos da [PokéAPI](https://pokeapi.co/).
 
-```
-s2-r1-api-pokedex/
-├── assets/
-│   └── icon.png
-├── src/
-│   ├── screens/
-│   │   ├── Home/index.tsx        # Tela inicial (título, descrição, botão)
-│   │   ├── Lista/index.tsx       # Tela de listagem (FlatList + fetch)
-│   │   ├── Detalhes/index.tsx    # Tela de detalhes do item selecionado
-│   │   └── pics/pokeball.png     # Imagens usadas nas telas
-│   ├── services/
-│   │   └── api.ts                # Funções de requisição à PokéAPI
-│   └── types/
-│       └── index.ts              # Tipagens da navegação e da API
-├── App.tsx                       # Configuração do NavigationContainer/Stack
-├── index.ts
-├── app.json
-├── package.json
-└── tsconfig.json
-```
+## Funcionalidades
 
-## Como executar
+- Descoberta de Pokémon em cards, no estilo Tinder.
+- Gesto de swipe para a direita (curtir) e esquerda (passar).
+- Card com rotação, indicadores visuais de ação e retorno elástico quando o gesto não atinge o limite.
+- Botões para passar, super match e curtir.
+- Animação de celebração ao criar um match.
+- Tela com os Pokémon curtidos durante a sessão.
+- Perfil detalhado com tipos, medidas, habilidades e atributos base.
+- Estados de carregamento e tratamento de falha de rede.
+
+> Os matches ficam somente em memória e são reiniciados ao fechar o aplicativo.
+
+## Tecnologias
+
+- Expo SDK 57
+- React 19
+- React Native 0.86
+- TypeScript
+- React Navigation Native Stack
+- React Native Safe Area Context
+- PokéAPI
+
+## Pré-requisitos
+
+- Node.js `22.13.0` ou superior
+- npm
+- Expo Go no celular, ou um emulador Android/iOS
+
+## Instalação e execução
 
 ```bash
-cd s2-r1-api-pokedex
 npm install
-npx expo start
+npx expo start --lan
 ```
 
-Abra no **Expo Go** (QR Code) ou pressione `a` para rodar no emulador do Android Studio.
+Leia o QR Code com o Expo Go. O computador e o celular devem estar na mesma rede Wi-Fi.
 
-> Se preferir criar o projeto do zero antes de colar os arquivos:
-> ```bash
-> npx create-expo-app s2-r1-api-pokedex --template blank-typescript
-> cd s2-r1-api-pokedex
-> npx expo install react-native-screens react-native-safe-area-context
-> npm install @react-navigation/native @react-navigation/native-stack
-> ```
+Outros comandos disponíveis:
 
-## Requisitos atendidos
+```bash
+npm run android
+npm run ios
+npm run web
+```
 
-| Requisito | Onde está implementado |
+## Problemas de instalação
+
+Se o projeto foi atualizado de uma versão anterior do Expo e ocorrer conflito de dependências, faça uma instalação limpa:
+
+```powershell
+Remove-Item -Recurse -Force node_modules
+Remove-Item -Force package-lock.json
+npm install
+npx expo start -c --lan
+```
+
+## Como usar
+
+| Ação | Resultado |
 |---|---|
-| 1. Tela inicial com nome, descrição e botão | `src/screens/Home/index.tsx` |
-| 2. Tela de listagem com requisição à API | `src/screens/Lista/index.tsx` + `src/services/api.ts` (`GET /pokemon?limit=60`) |
-| 3. Tela de detalhes com dados adicionais | `src/screens/Detalhes/index.tsx` (`GET /pokemon/{id}`) |
-| 4. Navegação funcional entre telas | `App.tsx` com `createNativeStackNavigator` |
+| Arrastar card para a direita | Curte o Pokémon e cria um match. |
+| Arrastar card para a esquerda | Passa para o próximo Pokémon. |
+| Botão `×` | Passa o Pokémon. |
+| Botão `★` | Cria um super match. |
+| Botão `♥` | Cria um match. |
+| Tocar no card | Abre o perfil completo. |
+| Ícone de matches no topo | Abre a coleção de Pokémon curtidos. |
+
+## Estrutura
+
+```text
+src/
+├── context/
+│   └── PokemonMatches.tsx  # Estado compartilhado dos matches
+├── screens/
+│   ├── Home/               # Descoberta e gesto de swipe
+│   ├── Lista/              # Pokémon curtidos
+│   └── Detalhes/           # Perfil do Pokémon
+├── services/
+│   └── api.ts              # Comunicação com a PokéAPI
+├── theme.ts                # Cores e utilitários visuais
+└── types/
+    └── index.ts            # Tipagens da navegação e API
+```
 
 ## Endpoints utilizados
 
 | Uso | Endpoint |
 |---|---|
-| Listagem | `https://pokeapi.co/api/v2/pokemon?limit=60&offset=0` |
-| Detalhes | `https://pokeapi.co/api/v2/pokemon/{id}` |
-| Imagem | `raw.githubusercontent.com/PokeAPI/sprites/.../official-artwork/{id}.png` |
+| Perfil por nome ou ID | `https://pokeapi.co/api/v2/pokemon/{name-or-id}` |
+| Perfil por URL | URL retornada pela PokéAPI |
+| Arte oficial | `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{id}.png` |
 
-## Extras implementados
+## Validação
 
-- Campo de busca por nome na listagem.
-- Indicador de carregamento (`ActivityIndicator`) e tratamento de erro com botão "Tentar novamente".
-- Barras de progresso para os status base na tela de detalhes.
-- Tipagem completa em TypeScript (rotas e respostas da API).
+Para verificar os tipos sem iniciar o aplicativo:
+
+```bash
+npx tsc --noEmit
+```
