@@ -1,11 +1,9 @@
-// Tipagens da navegação
 export type RootStackParamList = {
   Home: undefined;
-  Lista: undefined;
+  Lista: { type?: string } | undefined;
   Detalhes: { name: string; url: string };
 };
 
-// Tipagens da PokéAPI
 export type PokemonListItem = {
   name: string;
   url: string;
@@ -18,6 +16,15 @@ export type PokemonListResponse = {
   results: PokemonListItem[];
 };
 
+export type PokemonTypeResponse = {
+  pokemon: { pokemon: PokemonListItem }[];
+};
+
+export type PokemonType = {
+  slot: number;
+  type: { name: string };
+};
+
 export type PokemonDetail = {
   id: number;
   name: string;
@@ -27,12 +34,10 @@ export type PokemonDetail = {
   sprites: {
     front_default: string | null;
     other?: {
-      "official-artwork"?: {
-        front_default: string | null;
-      };
+      "official-artwork"?: { front_default: string | null };
     };
   };
-  types: { slot: number; type: { name: string } }[];
+  types: PokemonType[];
   abilities: { ability: { name: string }; is_hidden: boolean }[];
   stats: { base_stat: number; stat: { name: string } }[];
 };

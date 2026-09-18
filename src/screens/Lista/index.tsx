@@ -1,159 +1,26 @@
-import React, { useCallback, useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  Image,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-  SafeAreaView,
-  TextInput,
-} from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { getPokemons, getSpriteUrl, extractId } from "../../services/api";
-import { PokemonListItem, RootStackParamList } from "../../types";
+import { usePokemonMatches } from "../../context/PokemonMatches";
+import { getPokemonUrl } from "../../services/api";
+import { colors, labelize, typeColors } from "../../theme";
+import { RootStackParamList } from "../../types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Lista">;
 
 export default function Lista({ navigation }: Props) {
-  const [pokemons, setPokemons] = useState<PokemonListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
-  const [busca, setBusca] = useState("");
-
-  const carregar = useCallback(async () => {
-    try {
-      setLoading(true);
-      setErro(null);
-      const data = await getPokemons(60, 0);
-      setPokemons(data.results);
-    } catch (e) {
-      setErro("Não foi possível carregar os dados. Verifique sua conexão.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    carregar();
-  }, [carregar]);
-
-  const dadosFiltrados = pokemons.filter((p) =>
-    p.name.toLowerCase().includes(busca.toLowerCase())
-  );
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#D32F2F" />
-        <Text style={styles.info}>Carregando pokémons...</Text>
-      </View>
-    );
-  }
-
-  if (erro) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.erro}>{erro}</Text>
-        <TouchableOpacity style={styles.retry} onPress={carregar}>
-          <Text style={styles.retryText}>Tentar novamente</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <TextInput
-        style={styles.input}
-        placeholder="Buscar pokémon..."
-        placeholderTextColor="#9E9E9E"
-        value={busca}
-        onChangeText={setBusca}
-      />
-
-      <FlatList
-        data={dadosFiltrados}
-        keyExtractor={(item) => item.name}
-        contentContainerStyle={{ padding: 16, paddingTop: 4 }}
-        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-        ListEmptyComponent={
-          <Text style={styles.info}>Nenhum pokémon encontrado.</Text>
-        }
-        renderItem={({ item }) => {
-          const id = extractId(item.url);
-          return (
-            <TouchableOpacity
-              style={styles.card}
-              activeOpacity={0.7}
-              onPress={() =>
-                navigation.navigate("Detalhes", {
-                  name: item.name,
-                  url: item.url,
-                })
-              }
-            >
-              <Image source={{ uri: getSpriteUrl(id) }} style={styles.sprite} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.nome}>{item.name}</Text>
-                <Text style={styles.id}>#{String(id).padStart(3, "0")}</Text>
-              </View>
-              <Text style={styles.seta}>›</Text>
-            </TouchableOpacity>
-          );
-        }}
-      />
-    </SafeAreaView>
-  );
+  const { matches } = usePokemonMatches();
+  return <SafeAreaView style={styles.safe} edges={["bottom"]}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <View style={styles.hero}><Text style={styles.heroIcon}>♥</Text><View><Text style={styles.title}>Seus matches</Text><Text style={styles.subtitle}>{matches.length === 0 ? "Comece a curtir Pokémons" : `${matches.length} conexão${matches.length === 1 ? "" : "ões"} especial${matches.length === 1 ? "" : "is"}`}</Text></View></View>
+    {matches.length === 0 ? <Empty onDiscover={() => navigation.navigate("Home")} /> : <View style={styles.grid}>{matches.map((pokemon) => <MatchCard key={pokemon.id} name={pokemon.name} id={pokemon.id} image={pokemon.sprites.other?.["official-artwork"]?.front_default ?? pokemon.sprites.front_default} type={pokemon.types[0]?.type.name ?? "normal"} onPress={() => navigation.navigate("Detalhes", { name: pokemon.name, url: getPokemonUrl(pokemon.id) })} />)}</View>}
+    {matches.length > 0 && <Pressable style={styles.discover} onPress={() => navigation.navigate("Home")}><Text style={styles.discoverText}>CONTINUAR DESCOBRINDO</Text></Pressable>}
+  </ScrollView></SafeAreaView>;
 }
 
+function Empty({ onDiscover }: { onDiscover: () => void }) { return <View style={styles.empty}><View style={styles.emptyHeart}><Text style={styles.emptyHeartText}>♡</Text></View><Text style={styles.emptyTitle}>Ainda sem matches</Text><Text style={styles.emptyText}>Curta Pokémons que combinam com sua próxima aventura. Eles aparecerão aqui.</Text><Pressable style={styles.discover} onPress={onDiscover}><Text style={styles.discoverText}>DESCOBRIR POKÉMONS</Text></Pressable></View>; }
+function MatchCard({ name, id, image, type, onPress }: { name: string; id: number; image: string | null; type: string; onPress: () => void }) { return <Pressable onPress={onPress} style={styles.match}><View style={[styles.imageArea, { backgroundColor: `${typeColors[type] ?? colors.pink}2E` }]}>{image && <Image source={{ uri: image }} style={styles.image} />}</View><View style={styles.matchFooter}><Text style={styles.matchName}>{labelize(name)}</Text><Text style={styles.matchNumber}>#{String(id).padStart(3, "0")}</Text></View></Pressable>; }
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5F5F5" },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-    backgroundColor: "#F5F5F5",
-  },
-  input: {
-    backgroundColor: "#FFFFFF",
-    margin: 16,
-    marginBottom: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    fontSize: 15,
-    color: "#212121",
-    elevation: 2,
-  },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 12,
-    elevation: 2,
-  },
-  sprite: { width: 56, height: 56, marginRight: 14 },
-  nome: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#212121",
-    textTransform: "capitalize",
-  },
-  id: { fontSize: 13, color: "#9E9E9E", marginTop: 2 },
-  seta: { fontSize: 28, color: "#BDBDBD", paddingHorizontal: 6 },
-  info: { marginTop: 12, color: "#616161", textAlign: "center" },
-  erro: { color: "#D32F2F", fontSize: 15, textAlign: "center" },
-  retry: {
-    marginTop: 16,
-    backgroundColor: "#D32F2F",
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 24,
-  },
-  retryText: { color: "#FFFFFF", fontWeight: "bold" },
+  safe: { flex: 1, backgroundColor: colors.background }, content: { padding: 20, paddingBottom: 34 }, hero: { flexDirection: "row", alignItems: "center", marginTop: 4, marginBottom: 27 }, heroIcon: { fontSize: 35, color: colors.pink, marginRight: 12 }, title: { color: colors.text, fontSize: 26, fontWeight: "900", letterSpacing: -0.7 }, subtitle: { color: colors.muted, marginTop: 3, fontSize: 13 }, grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 16 }, match: { width: "47.5%", borderRadius: 19, overflow: "hidden", backgroundColor: colors.surface, elevation: 2 }, imageArea: { height: 152, alignItems: "center", justifyContent: "center" }, image: { width: 135, height: 135 }, matchFooter: { padding: 12 }, matchName: { color: colors.text, fontWeight: "900", fontSize: 15 }, matchNumber: { color: colors.muted, fontSize: 11, marginTop: 3 }, empty: { alignItems: "center", paddingTop: 62, paddingHorizontal: 24 }, emptyHeart: { width: 94, height: 94, borderRadius: 47, backgroundColor: colors.pinkSoft, alignItems: "center", justifyContent: "center" }, emptyHeartText: { color: colors.pink, fontSize: 57, lineHeight: 62 }, emptyTitle: { color: colors.text, fontSize: 21, fontWeight: "900", marginTop: 20 }, emptyText: { color: colors.muted, textAlign: "center", lineHeight: 20, marginTop: 8 }, discover: { marginTop: 26, backgroundColor: colors.pink, paddingHorizontal: 19, paddingVertical: 14, borderRadius: 22, alignSelf: "center" }, discoverText: { color: "#FFF", fontSize: 11, fontWeight: "900", letterSpacing: 0.6 },
 });

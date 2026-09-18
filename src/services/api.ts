@@ -1,44 +1,44 @@
-import { PokemonDetail, PokemonListResponse } from "../types";
+import { PokemonDetail, PokemonListResponse, PokemonTypeResponse } from "../types";
 
 const BASE_URL = "https://pokeapi.co/api/v2";
 
-/**
- * Busca a lista de pokémons (nome + url de detalhe).
- */
-export async function getPokemons(limit = 50, offset = 0): Promise<PokemonListResponse> {
-  const response = await fetch(`${BASE_URL}/pokemon?limit=${limit}&offset=${offset}`);
-
-  if (!response.ok) {
-    throw new Error(`Erro ao buscar a lista de pokémons (${response.status})`);
-  }
-
-  return response.json();
-}
-
-/**
- * Busca os detalhes de um pokémon a partir da URL retornada na listagem.
- */
-export async function getPokemonByUrl(url: string): Promise<PokemonDetail> {
+async function request<T>(pathOrUrl: string): Promise<T> {
+  const url = pathOrUrl.startsWith("http") ? pathOrUrl : `${BASE_URL}${pathOrUrl}`;
   const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error(`Erro ao buscar os detalhes do pokémon (${response.status})`);
+    throw new Error(`Falha ao carregar dados (${response.status}).`);
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
-/**
- * Monta a URL da imagem a partir do ID (evita uma requisição extra na listagem).
- */
-export function getSpriteUrl(id: number): string {
+export function getPokemons(limit = 60, offset = 0) {
+  return request<PokemonListResponse>(`/pokemon?limit=${limit}&offset=${offset}`);
+}
+
+export function getPokemonByUrl(url: string) {
+  return request<PokemonDetail>(url);
+}
+
+export function getPokemonByName(name: string) {
+  return request<PokemonDetail>(`/pokemon/${name.trim().toLowerCase()}`);
+}
+
+export async function getPokemonsByType(type: string) {
+  const data = await request<PokemonTypeResponse>(`/type/${type}`);
+  return data.pokemon.map((entry) => entry.pokemon);
+}
+
+export function getPokemonUrl(id: number) {
+  return `${BASE_URL}/pokemon/${id}`;
+}
+
+export function getSpriteUrl(id: number) {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 }
 
-/**
- * Extrai o ID do pokémon da URL: .../pokemon/25/ -> 25
- */
-export function extractId(url: string): number {
-  const parts = url.split("/").filter(Boolean);
-  return Number(parts[parts.length - 1]);
+export function extractId(url: string) {
+  const id = Number(url.split("/").filter(Boolean).pop());
+  return Number.isFinite(id) ? id : 0;
 }

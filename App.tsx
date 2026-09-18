@@ -1,44 +1,25 @@
-import React from "react";
-import { StatusBar } from "expo-status-bar";
-import { NavigationContainer } from "@react-navigation/native";
+import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { PokemonMatchesProvider } from "./src/context/PokemonMatches";
+import Detalhes from "./src/screens/Detalhes";
 import Home from "./src/screens/Home";
 import Lista from "./src/screens/Lista";
-import Detalhes from "./src/screens/Detalhes";
+import { colors } from "./src/theme";
 import { RootStackParamList } from "./src/types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.background } };
 
 export default function App() {
-  return (
-    <NavigationContainer>
-      <StatusBar style="light" />
-      <Stack.Navigator
-        initialRouteName="Home"
-        screenOptions={{
-          headerStyle: { backgroundColor: "#D32F2F" },
-          headerTintColor: "#FFFFFF",
-          headerTitleStyle: { fontWeight: "bold" },
-          contentStyle: { backgroundColor: "#F5F5F5" },
-        }}
-      >
-        <Stack.Screen
-          name="Home"
-          component={Home}
-          options={{ title: "Pokédex Mobile" }}
-        />
-        <Stack.Screen
-          name="Lista"
-          component={Lista}
-          options={{ title: "Pokémons" }}
-        />
-        <Stack.Screen
-          name="Detalhes"
-          component={Detalhes}
-          options={{ title: "Detalhes" }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
+  return <SafeAreaProvider><PokemonMatchesProvider><NavigationContainer theme={theme}>
+    <StatusBar style="dark" />
+    <Stack.Navigator screenOptions={{ headerShadowVisible: false, headerStyle: { backgroundColor: colors.background }, headerTintColor: colors.text, headerTitleStyle: { fontWeight: "800" }, contentStyle: { backgroundColor: colors.background } }}>
+      <Stack.Screen name="Home" component={Home} options={{ headerShown: false }} />
+      <Stack.Screen name="Lista" component={Lista} options={{ title: "Seus matches" }} />
+      <Stack.Screen name="Detalhes" component={Detalhes} options={{ title: "Perfil" }} />
+    </Stack.Navigator>
+  </NavigationContainer></PokemonMatchesProvider></SafeAreaProvider>;
 }
