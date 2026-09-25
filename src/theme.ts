@@ -7,7 +7,6 @@ export const colors = {
   pink: "#FD5068",
   pinkSoft: "#FFF0F3",
   blue: "#20B7E7",
-  gold: "#F8A938",
   green: "#20C997",
   dark: "#111116",
 };

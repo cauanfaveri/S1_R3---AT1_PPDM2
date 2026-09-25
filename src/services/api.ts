@@ -1,4 +1,4 @@
-import { PokemonDetail, PokemonListResponse, PokemonTypeResponse } from "../types";
+import { PokemonDetail, PokemonListResponse } from "../types";
 
 const BASE_URL = "https://pokeapi.co/api/v2";
 
@@ -23,11 +23,6 @@ export function getPokemonByUrl(url: string) {
 
 export function getPokemonByName(name: string) {
   return request<PokemonDetail>(`/pokemon/${name.trim().toLowerCase()}`);
-}
-
-export async function getPokemonsByType(type: string) {
-  const data = await request<PokemonTypeResponse>(`/type/${type}`);
-  return data.pokemon.map((entry) => entry.pokemon);
 }
 
 export function getPokemonUrl(id: number) {

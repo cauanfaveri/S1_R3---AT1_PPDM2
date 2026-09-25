@@ -18,25 +18,37 @@ export default function Home({ navigation }: Props) {
   const [pokemon, setPokemon] = useState<PokemonDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
-  const [matchCelebration, setMatchCelebration] = useState<PokemonDetail | null>(null);
-  const { matches, toggleMatch } = usePokemonMatches();
+  const [matchCelebration, setMatchCelebration] = useState<{ pokemon: PokemonDetail; superLike: boolean } | null>(null);
+  const { matches, addMatch } = usePokemonMatches();
   const position = useRef(new Animated.ValueXY()).current;
   const matchScale = useRef(new Animated.Value(0.4)).current;
   const matchOpacity = useRef(new Animated.Value(0)).current;
+  const requestVersion = useRef(0);
+  const swipeInProgress = useRef(false);
 
   const loadPokemon = useCallback(async () => {
+    const version = ++requestVersion.current;
     setLoading(true);
     try {
-      setPokemon(await getPokemonByName(String(deck[index % deck.length])));
+      const result = await getPokemonByName(String(deck[index % deck.length]));
+      if (version === requestVersion.current) setPokemon(result);
     } catch {
-      setPokemon(null);
-      setNotice("Nao foi possivel encontrar um Pokemon agora.");
+      if (version === requestVersion.current) {
+        setPokemon(null);
+        setNotice("Não foi possível encontrar um Pokémon agora.");
+      }
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) {
+        setLoading(false);
+        swipeInProgress.current = false;
+      }
     }
   }, [index]);
 
-  useEffect(() => { void loadPokemon(); }, [loadPokemon]);
+  useEffect(() => {
+    void loadPokemon();
+    return () => { requestVersion.current += 1; };
+  }, [loadPokemon]);
 
   useEffect(() => {
     if (!matchCelebration) return;
@@ -55,18 +67,18 @@ export default function Home({ navigation }: Props) {
   const completeReaction = useCallback((direction: "left" | "right", superLike = false) => {
     if (!pokemon) return;
     if (direction === "right") {
-      toggleMatch(pokemon);
-      setMatchCelebration(pokemon);
-      setNotice(superLike ? "Super match!" : `${labelize(pokemon.name)} curtiu voce tambem!`);
+      addMatch(pokemon);
+      setMatchCelebration({ pokemon, superLike });
     } else {
       setNotice(null);
     }
     position.setValue({ x: 0, y: 0 });
     setIndex((current) => current + 1);
-  }, [pokemon, position, toggleMatch]);
+  }, [addMatch, pokemon, position]);
 
   const swipe = useCallback((direction: "left" | "right", superLike = false) => {
-    if (!pokemon || loading) return;
+    if (!pokemon || loading || swipeInProgress.current) return;
+    swipeInProgress.current = true;
     Animated.timing(position, {
       toValue: { x: direction === "right" ? screenWidth * 1.35 : -screenWidth * 1.35, y: 20 },
       duration: 240,
@@ -95,6 +107,7 @@ export default function Home({ navigation }: Props) {
         <View style={styles.brand}><Text style={styles.flame}>♥</Text><Text style={styles.logo}>PokeMatch</Text></View>
         <Pressable onPress={() => navigation.navigate("Lista")} style={styles.matchLink}><Text style={styles.matchCount}>{matches.length}</Text><Text style={styles.matchIcon}>◇</Text></Pressable>
       </View>
+      <Text style={styles.description}>Descubra Pokémon, conheça seus perfis e guarde seus favoritos.</Text>
 
       <View style={styles.deckArea}>
         <View style={styles.backCard} />
@@ -104,14 +117,14 @@ export default function Home({ navigation }: Props) {
             <Animated.View pointerEvents="none" style={[styles.swipeLabel, styles.likeLabel, { opacity: likeOpacity }]}><Text style={styles.likeLabelText}>CURTIR</Text></Animated.View>
             <Animated.View pointerEvents="none" style={[styles.swipeLabel, styles.nopeLabel, { opacity: nopeOpacity }]}><Text style={styles.nopeLabelText}>PASSAR</Text></Animated.View>
           </Animated.View>
-        ) : <View style={styles.card}><Text style={styles.emptyTitle}>Ops...</Text><Text style={styles.emptyText}>{notice}</Text><Pressable onPress={() => void loadPokemon()}><Text style={styles.retry}>Tentar de novo</Text></Pressable></View>}
+        ) : <View style={styles.card}><Text style={styles.emptyTitle}>Ops...</Text><Text style={styles.emptyText}>{notice}</Text><Pressable onPress={() => { setNotice(null); void loadPokemon(); }}><Text style={styles.retry}>Tentar de novo</Text></Pressable></View>}
       </View>
 
       <Text style={styles.hint}>Arraste para a direita para curtir ou esquerda para passar</Text>
       <View style={styles.actions}><Action label="×" color={colors.pink} size="large" onPress={() => swipe("left")} /><Action label="★" color={colors.blue} onPress={() => swipe("right", true)} /><Action label="♥" color={colors.green} size="large" onPress={() => swipe("right")} /></View>
       {notice && <View style={styles.toast}><Text style={styles.toastText}>{notice}</Text></View>}
-      <Pressable style={styles.matchesButton} onPress={() => navigation.navigate("Lista")}><Text style={styles.matchesText}>VER MEUS MATCHES</Text></Pressable>
-      {matchCelebration && <MatchCelebration pokemon={matchCelebration} opacity={matchOpacity} scale={matchScale} onDismiss={() => setMatchCelebration(null)} />}
+      <Pressable style={styles.matchesButton} onPress={() => navigation.navigate("Lista")}><Text style={styles.matchesText}>EXPLORAR POKÉMON</Text></Pressable>
+      {matchCelebration && <MatchCelebration pokemon={matchCelebration.pokemon} superLike={matchCelebration.superLike} opacity={matchOpacity} scale={matchScale} onDismiss={() => setMatchCelebration(null)} />}
     </SafeAreaView>
   );
 }
@@ -140,12 +153,12 @@ function PokemonCard({ pokemon, onPress }: { pokemon: PokemonDetail; onPress: ()
 
 function Action({ label, color, onPress, size }: { label: string; color: string; onPress: () => void; size?: "large" }) { return <Pressable onPress={onPress} style={[styles.action, size === "large" && styles.actionLarge, { borderColor: `${color}44` }]}><Text style={[styles.actionText, size === "large" && styles.actionTextLarge, { color }]}>{label}</Text></Pressable>; }
 
-function MatchCelebration({ pokemon, opacity, scale, onDismiss }: { pokemon: PokemonDetail; opacity: Animated.Value; scale: Animated.Value; onDismiss: () => void }) {
+function MatchCelebration({ pokemon, superLike, opacity, scale, onDismiss }: { pokemon: PokemonDetail; superLike: boolean; opacity: Animated.Value; scale: Animated.Value; onDismiss: () => void }) {
   const image = pokemon.sprites.other?.["official-artwork"]?.front_default ?? pokemon.sprites.front_default;
   return <Pressable style={styles.matchOverlay} onPress={onDismiss}>
     <Animated.View style={[styles.matchPanel, { opacity, transform: [{ scale }] }]}>
       <View style={styles.sparkleOne} /><View style={styles.sparkleTwo} /><View style={styles.sparkleThree} />
-      <Text style={styles.matchTitle}>E UM MATCH!</Text>
+      <Text style={styles.matchTitle}>{superLike ? "SUPER MATCH!" : "É UM MATCH!"}</Text>
       <Text style={styles.matchSubtitle}>Voce e {labelize(pokemon.name)} combinaram.</Text>
       <View style={styles.matchImageFrame}>{image && <Image source={{ uri: image }} style={styles.matchImage} />}</View>
       <Text style={styles.matchDismiss}>TOQUE PARA CONTINUAR</Text>
@@ -154,5 +167,5 @@ function MatchCelebration({ pokemon, opacity, scale, onDismiss }: { pokemon: Pok
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 20 }, header: { height: 64, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, brand: { flexDirection: "row", alignItems: "center", gap: 7 }, flame: { color: colors.pink, fontSize: 26 }, logo: { color: colors.text, fontSize: 21, fontWeight: "900", letterSpacing: -0.6 }, matchLink: { height: 40, minWidth: 42, backgroundColor: colors.pinkSoft, borderRadius: 20, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 10 }, matchCount: { color: colors.pink, fontWeight: "900", marginRight: 4 }, matchIcon: { color: colors.pink, fontSize: 21 }, deckArea: { flex: 1, minHeight: 390, justifyContent: "center" }, backCard: { position: "absolute", backgroundColor: "#EDEEF2", borderRadius: 26, height: "90%", width: "94%", alignSelf: "center", transform: [{ translateY: 10 }] }, animatedCard: { height: "94%", minHeight: 390 }, card: { height: "100%", minHeight: 390, backgroundColor: colors.surface, borderRadius: 26, overflow: "hidden", elevation: 7, shadowColor: "#222", shadowOpacity: 0.16, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, alignItems: "center", justifyContent: "center" }, cardGlow: { position: "absolute", top: -70, width: 360, height: 300, borderRadius: 180, opacity: 0.25 }, image: { width: "92%", height: "73%", marginTop: -42 }, gradient: { position: "absolute", left: 0, right: 0, bottom: 0, minHeight: 146, padding: 20, justifyContent: "flex-end", backgroundColor: "#17171CEB" }, name: { color: "#FFF", fontSize: 29, fontWeight: "900", letterSpacing: -0.8 }, number: { color: "#C2C3CB", fontSize: 17, fontWeight: "600" }, bio: { color: "#D5D6DD", fontSize: 13, marginTop: 5 }, tags: { flexDirection: "row", gap: 6, marginTop: 12 }, tag: { backgroundColor: "#FFFFFF2A", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }, tagText: { color: "#FFF", fontSize: 11, fontWeight: "800" }, swipeLabel: { position: "absolute", top: 34, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 3, borderRadius: 6, transform: [{ rotate: "-10deg" }] }, likeLabel: { left: 23, borderColor: colors.green }, nopeLabel: { right: 23, borderColor: colors.pink, transform: [{ rotate: "10deg" }] }, likeLabelText: { color: colors.green, fontSize: 22, fontWeight: "900" }, nopeLabelText: { color: colors.pink, fontSize: 22, fontWeight: "900" }, hint: { color: colors.muted, fontSize: 12, textAlign: "center", marginTop: 4 }, actions: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 23, marginVertical: 18 }, action: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.surface, borderWidth: 1, alignItems: "center", justifyContent: "center", elevation: 2 }, actionLarge: { width: 64, height: 64, borderRadius: 32 }, actionText: { fontSize: 29, fontWeight: "500", lineHeight: 33 }, actionTextLarge: { fontSize: 35 }, toast: { alignSelf: "center", position: "absolute", bottom: 94, backgroundColor: colors.dark, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 18 }, toastText: { color: "#FFF", fontSize: 12, fontWeight: "700" }, matchesButton: { alignSelf: "center", paddingBottom: 10 }, matchesText: { color: colors.pink, fontSize: 12, fontWeight: "900", letterSpacing: 0.8 }, emptyTitle: { color: colors.text, fontWeight: "900", fontSize: 23 }, emptyText: { color: colors.muted, marginTop: 8, textAlign: "center", paddingHorizontal: 24 }, retry: { color: colors.pink, marginTop: 20, fontWeight: "900" }, matchOverlay: { position: "absolute", zIndex: 20, left: -20, right: -20, top: 0, bottom: 0, backgroundColor: "#FD5068F2", alignItems: "center", justifyContent: "center", padding: 28 }, matchPanel: { width: "100%", alignItems: "center" }, matchTitle: { color: "#FFF", fontSize: 32, fontWeight: "900", letterSpacing: 1 }, matchSubtitle: { color: "#FFE8EC", fontSize: 15, marginTop: 8, textAlign: "center" }, matchImageFrame: { width: 190, height: 190, borderRadius: 95, marginTop: 26, backgroundColor: "#FFFFFF2E", borderWidth: 5, borderColor: "#FFFFFF99", alignItems: "center", justifyContent: "center" }, matchImage: { width: 174, height: 174 }, matchDismiss: { marginTop: 30, color: "#FFF", fontWeight: "900", fontSize: 11, letterSpacing: 1 }, sparkleOne: { position: "absolute", width: 16, height: 16, borderRadius: 8, backgroundColor: "#FFF", top: 10, left: 45 }, sparkleTwo: { position: "absolute", width: 10, height: 10, borderRadius: 5, backgroundColor: "#FFE58B", top: 104, right: 48 }, sparkleThree: { position: "absolute", width: 13, height: 13, borderRadius: 7, backgroundColor: "#FFF", bottom: 20, left: 56 },
+  safe: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 20 }, header: { height: 64, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, description: { color: colors.muted, fontSize: 13, lineHeight: 18, marginBottom: 8 }, brand: { flexDirection: "row", alignItems: "center", gap: 7 }, flame: { color: colors.pink, fontSize: 26 }, logo: { color: colors.text, fontSize: 21, fontWeight: "900", letterSpacing: -0.6 }, matchLink: { height: 40, minWidth: 42, backgroundColor: colors.pinkSoft, borderRadius: 20, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 10 }, matchCount: { color: colors.pink, fontWeight: "900", marginRight: 4 }, matchIcon: { color: colors.pink, fontSize: 21 }, deckArea: { flex: 1, minHeight: 390, justifyContent: "center" }, backCard: { position: "absolute", backgroundColor: "#EDEEF2", borderRadius: 26, height: "90%", width: "94%", alignSelf: "center", transform: [{ translateY: 10 }] }, animatedCard: { height: "94%", minHeight: 390 }, card: { height: "100%", minHeight: 390, backgroundColor: colors.surface, borderRadius: 26, overflow: "hidden", elevation: 7, shadowColor: "#222", shadowOpacity: 0.16, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, alignItems: "center", justifyContent: "center" }, cardGlow: { position: "absolute", top: -70, width: 360, height: 300, borderRadius: 180, opacity: 0.25 }, image: { width: "92%", height: "73%", marginTop: -42 }, gradient: { position: "absolute", left: 0, right: 0, bottom: 0, minHeight: 146, padding: 20, justifyContent: "flex-end", backgroundColor: "#17171CEB" }, name: { color: "#FFF", fontSize: 29, fontWeight: "900", letterSpacing: -0.8 }, number: { color: "#C2C3CB", fontSize: 17, fontWeight: "600" }, bio: { color: "#D5D6DD", fontSize: 13, marginTop: 5 }, tags: { flexDirection: "row", gap: 6, marginTop: 12 }, tag: { backgroundColor: "#FFFFFF2A", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }, tagText: { color: "#FFF", fontSize: 11, fontWeight: "800" }, swipeLabel: { position: "absolute", top: 34, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 3, borderRadius: 6, transform: [{ rotate: "-10deg" }] }, likeLabel: { left: 23, borderColor: colors.green }, nopeLabel: { right: 23, borderColor: colors.pink, transform: [{ rotate: "10deg" }] }, likeLabelText: { color: colors.green, fontSize: 22, fontWeight: "900" }, nopeLabelText: { color: colors.pink, fontSize: 22, fontWeight: "900" }, hint: { color: colors.muted, fontSize: 12, textAlign: "center", marginTop: 4 }, actions: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 23, marginVertical: 18 }, action: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.surface, borderWidth: 1, alignItems: "center", justifyContent: "center", elevation: 2 }, actionLarge: { width: 64, height: 64, borderRadius: 32 }, actionText: { fontSize: 29, fontWeight: "500", lineHeight: 33 }, actionTextLarge: { fontSize: 35 }, toast: { alignSelf: "center", position: "absolute", bottom: 94, backgroundColor: colors.dark, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 18 }, toastText: { color: "#FFF", fontSize: 12, fontWeight: "700" }, matchesButton: { alignSelf: "center", paddingBottom: 10 }, matchesText: { color: colors.pink, fontSize: 12, fontWeight: "900", letterSpacing: 0.8 }, emptyTitle: { color: colors.text, fontWeight: "900", fontSize: 23 }, emptyText: { color: colors.muted, marginTop: 8, textAlign: "center", paddingHorizontal: 24 }, retry: { color: colors.pink, marginTop: 20, fontWeight: "900" }, matchOverlay: { position: "absolute", zIndex: 20, left: -20, right: -20, top: 0, bottom: 0, backgroundColor: "#FD5068F2", alignItems: "center", justifyContent: "center", padding: 28 }, matchPanel: { width: "100%", alignItems: "center" }, matchTitle: { color: "#FFF", fontSize: 32, fontWeight: "900", letterSpacing: 1 }, matchSubtitle: { color: "#FFE8EC", fontSize: 15, marginTop: 8, textAlign: "center" }, matchImageFrame: { width: 190, height: 190, borderRadius: 95, marginTop: 26, backgroundColor: "#FFFFFF2E", borderWidth: 5, borderColor: "#FFFFFF99", alignItems: "center", justifyContent: "center" }, matchImage: { width: 174, height: 174 }, matchDismiss: { marginTop: 30, color: "#FFF", fontWeight: "900", fontSize: 11, letterSpacing: 1 }, sparkleOne: { position: "absolute", width: 16, height: 16, borderRadius: 8, backgroundColor: "#FFF", top: 10, left: 45 }, sparkleTwo: { position: "absolute", width: 10, height: 10, borderRadius: 5, backgroundColor: "#FFE58B", top: 104, right: 48 }, sparkleThree: { position: "absolute", width: 13, height: 13, borderRadius: 7, backgroundColor: "#FFF", bottom: 20, left: 56 },
 });

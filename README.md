@@ -1,6 +1,6 @@
 # PokéMatch
 
-PokéMatch é uma experiência de descoberta de Pokémon inspirada em aplicativos de match. Em vez de navegar por uma lista tradicional, a pessoa usuária avalia um Pokémon por vez: arrasta o card para a direita para curtir ou para a esquerda para passar.
+PokéMatch é uma experiência de descoberta de Pokémon inspirada em aplicativos de match. A pessoa usuária pode avaliar um Pokémon por vez, arrastando o card para a direita para curtir ou para a esquerda para passar, e também explorar uma coleção em lista.
 
 O aplicativo foi desenvolvido com React Native, Expo e TypeScript, consumindo dados públicos da [PokéAPI](https://pokeapi.co/).
 
@@ -12,10 +12,17 @@ O aplicativo foi desenvolvido com React Native, Expo e TypeScript, consumindo da
 - Botões para passar, super match e curtir.
 - Animação de celebração ao criar um match.
 - Tela com os Pokémon curtidos durante a sessão.
-- Perfil detalhado com tipos, medidas, habilidades e atributos base.
+- Coleção de 60 Pokémon carregada da PokéAPI, com acesso ao perfil de cada um.
+- Perfil detalhado com tipos, medidas e atributos base.
 - Estados de carregamento e tratamento de falha de rede.
 
 > Os matches ficam somente em memória e são reiniciados ao fechar o aplicativo.
+
+## Telas do aplicativo
+
+| Home | Listagem | Detalhes |
+|:---:|:---:|:---:|
+| <img src="docs/1790338611447.jpg" alt="Tela inicial do PokéMatch" width="240" height="520"> | <img src="docs/1790338607184.jpg" alt="Tela de listagem dos Pokémon" width="240" height="520"> | <img src="docs/1790338603677.jpg" alt="Tela de detalhes do Pokémon" width="240" height="520"> |
 
 ## Tecnologias
 
@@ -81,7 +88,7 @@ src/
 │   └── PokemonMatches.tsx  # Estado compartilhado dos matches
 ├── screens/
 │   ├── Home/               # Descoberta e gesto de swipe
-│   ├── Lista/              # Pokémon curtidos
+│   ├── Lista/              # Pokémon curtidos e coleção da API
 │   └── Detalhes/           # Perfil do Pokémon
 ├── services/
 │   └── api.ts              # Comunicação com a PokéAPI
@@ -95,6 +102,7 @@ src/
 | Uso | Endpoint |
 |---|---|
 | Perfil por nome ou ID | `https://pokeapi.co/api/v2/pokemon/{name-or-id}` |
+| Coleção de Pokémon | `https://pokeapi.co/api/v2/pokemon?limit=60&offset=0` |
 | Perfil por URL | URL retornada pela PokéAPI |
 | Arte oficial | `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{id}.png` |
 

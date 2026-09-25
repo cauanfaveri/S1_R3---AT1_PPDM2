@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -14,12 +14,22 @@ export default function Detalhes({ route, navigation }: Props) {
   const { name, url } = route.params;
   const [pokemon, setPokemon] = useState<PokemonDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [retry, setRetry] = useState(0);
   const { isMatched, toggleMatch } = usePokemonMatches();
-  const load = useCallback(async () => { try { setLoading(true); setPokemon(await getPokemonByUrl(url)); } finally { setLoading(false); } }, [url]);
-  useEffect(() => { navigation.setOptions({ title: labelize(name) }); void load(); }, [load, name, navigation]);
+  useEffect(() => { navigation.setOptions({ title: labelize(name) }); }, [name, navigation]);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setPokemon(null);
+    getPokemonByUrl(url)
+      .then((result) => { if (active) setPokemon(result); })
+      .catch(() => { if (active) setPokemon(null); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [retry, url]);
 
   if (loading) return <View style={styles.state}><ActivityIndicator color={colors.pink} size="large" /></View>;
-  if (!pokemon) return <View style={styles.state}><Text style={styles.fail}>Perfil indisponível.</Text><Pressable onPress={() => void load()}><Text style={styles.retry}>Tentar novamente</Text></Pressable></View>;
+  if (!pokemon) return <View style={styles.state}><Text style={styles.fail}>Perfil indisponível.</Text><Pressable onPress={() => setRetry((current) => current + 1)}><Text style={styles.retry}>Tentar novamente</Text></Pressable></View>;
   const image = pokemon.sprites.other?.["official-artwork"]?.front_default ?? pokemon.sprites.front_default;
   const matched = isMatched(pokemon.id);
   const accent = typeColors[pokemon.types[0]?.type.name] ?? colors.pink;

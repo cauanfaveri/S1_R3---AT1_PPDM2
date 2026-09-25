@@ -14,12 +14,26 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.background } };
 
 export default function App() {
-  return <SafeAreaProvider><PokemonMatchesProvider><NavigationContainer theme={theme}>
-    <StatusBar style="dark" />
-    <Stack.Navigator screenOptions={{ headerShadowVisible: false, headerStyle: { backgroundColor: colors.background }, headerTintColor: colors.text, headerTitleStyle: { fontWeight: "800" }, contentStyle: { backgroundColor: colors.background } }}>
-      <Stack.Screen name="Home" component={Home} options={{ headerShown: false }} />
-      <Stack.Screen name="Lista" component={Lista} options={{ title: "Seus matches" }} />
-      <Stack.Screen name="Detalhes" component={Detalhes} options={{ title: "Perfil" }} />
-    </Stack.Navigator>
-  </NavigationContainer></PokemonMatchesProvider></SafeAreaProvider>;
+  return (
+    <SafeAreaProvider>
+      <PokemonMatchesProvider>
+        <NavigationContainer theme={theme}>
+          <StatusBar style="dark" />
+          <Stack.Navigator
+            screenOptions={{
+              headerShadowVisible: false,
+              headerStyle: { backgroundColor: colors.background },
+              headerTintColor: colors.text,
+              headerTitleStyle: { fontWeight: "800" },
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          >
+            <Stack.Screen name="Home" component={Home} options={{ headerShown: false }} />
+            <Stack.Screen name="Lista" component={Lista} options={{ title: "Explorar Pokémon" }} />
+            <Stack.Screen name="Detalhes" component={Detalhes} options={{ title: "Perfil" }} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </PokemonMatchesProvider>
+    </SafeAreaProvider>
+  );
 }

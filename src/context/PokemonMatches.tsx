@@ -5,6 +5,7 @@ import { PokemonDetail } from "../types";
 type MatchesContextValue = {
   matches: PokemonDetail[];
   isMatched: (id: number) => boolean;
+  addMatch: (pokemon: PokemonDetail) => void;
   toggleMatch: (pokemon: PokemonDetail) => void;
 };
 
@@ -15,6 +16,9 @@ export function PokemonMatchesProvider({ children }: { children: ReactNode }) {
   const value = useMemo<MatchesContextValue>(() => ({
     matches,
     isMatched: (id) => matches.some((pokemon) => pokemon.id === id),
+    addMatch: (pokemon) => setMatches((current) => current.some((item) => item.id === pokemon.id)
+      ? current
+      : [pokemon, ...current]),
     toggleMatch: (pokemon) => setMatches((current) => current.some((item) => item.id === pokemon.id)
       ? current.filter((item) => item.id !== pokemon.id)
       : [pokemon, ...current]),
